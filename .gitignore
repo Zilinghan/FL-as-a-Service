@@ -1,5 +1,6 @@
 outputs_*
 test/*/datasets
+.DS_Store
 
 test/server-client/mnist_grpc_client_copy.py
 
