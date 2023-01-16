@@ -1,3 +1,8 @@
+outputs_*
+test/*/datasets
+
+test/server-client/mnist_grpc_client_copy.py
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
