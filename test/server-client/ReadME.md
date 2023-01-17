@@ -1,5 +1,18 @@
 ## How to run the server-client test
 
+### Installation
+First create a virtual environment.
+```
+conda create -n APPFL python=3.10.6
+conda activate APPFL
+```
+Then install the packages.
+```
+pip install "appfl[analytics]"
+pip install protobuf==3.20
+```
+
+
 ### Server
 Run the following command on one terminal/machine. Specifically, `host` is the IP address of the server, `num_clients` is the total number of clients involved in the federated learning.
 ```
