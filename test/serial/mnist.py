@@ -27,7 +27,7 @@ parser.add_argument("--num_channel", type=int, default=1)
 parser.add_argument("--num_classes", type=int, default=10)
 parser.add_argument("--num_pixel", type=int, default=28)
 parser.add_argument("--model", type=str, default="CNN")
-parser.add_argument("--dataset_dir", type=str, default=None)
+parser.add_argument("--project_dir", type=str, default=None)
 
 ## clients
 parser.add_argument("--num_clients", type=int, default=1)
@@ -53,10 +53,10 @@ if torch.cuda.is_available():
  
 
 def get_data():
-    if args.dataset_dir is None:
+    if args.project_dir is None:
         dir = os.getcwd() + "/datasets/RawData"
     else:
-        dir = args.dataset_dir
+        dir = "%s/datasets/RawData" % (args.project_dir)
 
     # test data for a server
     test_data_raw = eval("torchvision.datasets." + args.dataset)(
@@ -96,8 +96,6 @@ def get_data():
         )
     return train_datasets, test_dataset
 
-
-
 ## Run
 def main():
     """ Configuration """
@@ -123,11 +121,19 @@ def main():
     cfg.use_tensorboard = False
     cfg.save_model_state_dict = False
 
-    cfg.output_dirname = "./outputs_%s_%s_%s" % (
-        args.dataset,
-        args.server,
-        args.client_optimizer,
-    )
+    if args.project_dir is None:
+        cfg.output_dirname = "./outputs_%s_%s_%s" % (
+            args.dataset,
+            args.server,
+            args.client_optimizer,
+        )
+    else:
+        cfg.output_dirname = "%s/outputs_%s_%s_%s" % (
+            args.project_dir,
+            args.dataset,
+            args.server,
+            args.client_optimizer,
+        )
     if args.server_lr != None:
         cfg.fed.args.server_learning_rate = args.server_lr
         cfg.output_dirname += "_ServerLR_%s" % (args.server_lr)
