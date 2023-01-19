@@ -26,6 +26,8 @@ parser.add_argument("--dataset", type=str, default="MNIST")
 parser.add_argument("--num_channel", type=int, default=1)
 parser.add_argument("--num_classes", type=int, default=10)
 parser.add_argument("--num_pixel", type=int, default=28)
+parser.add_argument("--model", type=str, default="CNN")
+parser.add_argument("--dataset_dir", type=str, default=None)
 
 ## clients
 parser.add_argument("--num_clients", type=int, default=1)
@@ -51,7 +53,10 @@ if torch.cuda.is_available():
  
 
 def get_data():
-    dir = os.getcwd() + "/datasets/RawData"
+    if args.dataset_dir is None:
+        dir = os.getcwd() + "/datasets/RawData"
+    else:
+        dir = args.dataset_dir
 
     # test data for a server
     test_data_raw = eval("torchvision.datasets." + args.dataset)(
