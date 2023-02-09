@@ -1,66 +1,62 @@
-# Examples
+# How to Run funcX FL on Delta Cluster
 
-This directory contains examples showing how to run our APPFL using either MPI or gRPC.
-Currently, we have the following examples:
+## Installation
+0. [For Delta] Load the anaconda module 
 
-- MNIST
-- CIFAR10
-- FEMNIST
-- Coronahack
+    ```
+    module load anaconda3_gpu
+    ```
+1. Create a virtual environment using `conda`
 
-# How to run
+    ```
+    conda create -n funcx python=3.8
+    conda activate funcx
+    ```
+2. Clone this repository [**Note**: If you find some packages unable to install, simple `Ctrl+C` to skip them. I adopt the original requirements file, which is not a perfect one.]
 
-Each example is implemented in a separate python file, e.g., `mnist.py` and `grpc_mnist.py` for the MNIST example.
-By default, the number of clients are set to `4` for all examples, except for the FEMNIST example which is set to `203`.
-
-We simulate federated learning by launching MPI processes (# processes = 1 + # clients, where 1 for server).
-MPI protocol will be used for communication between server and clients.
-For files starting with `grpc_`, we use gRPC protocol for communication instead.
-
-## MNIST, CIFAR10, Coronahack
-
-All the examples require the same number of MPI processes.
-Below shows how to execute the MNIST example.
-For Coronahack and FEMNIST check the dataset directory for preprocessing the data and replace the file name with an appropriate example name.
+    ```
+    git clone https://github.com/Zilinghan/FL-as-a-Service.git FaaS
+    cd FaaS
+    git checkout funcx
+    pip install -r requirements.txt
+    pip install -e .
+    pip install funcx-endpoint
+    ```
 
 
-### MPI communication
+## FuncX Endpoint Config
+3. Setup funcX endpoint. Please add your own `<ENDPOINT_NAME>` such as `delta-gpu`. 
 
-```bash
-mpiexec -n 5 python mnist.py --server ServerFedAvg --num_epochs 6 --client_lr 0.01
-```
-`--server : ServerFedAvg  or  ICEADMMServer  or IIADMMServer`
-start tensorborad and then go to the web page
-```shell
-tensorboard --logdir=runs
-```
+    You might be required to login with [Globus](https://app.globus.org), following the prompt instructions and finish the authentication steps.
 
-### gRPC communication
+    ```
+    funcx-endpoint configure <ENDPOINT_NAME>
+    ```
 
-For gRPC communication, we launch multiple MPI processes as well for simulation purposes only.
-Note that our gPRC implementation itself does not require any MPI communication.
+4. Confiugre the endpoint by editting the file `~/.funcx/<ENDPOINT_NAME>/config.py`. A sample file can be found [here](funcx/endpoint_configs/config.py). Please pay attention to the following points:
 
-```bash
-mpiexec -n 5 python grpc_mnist.py
-```
+    (1) Put whatever cmds you want to run before starting a worker into `'worker_init'` part.
 
-### Running Serial
+    (2) Put whatever cmds you want to run with `#SBATCH` into the `'scheduler_options'` part, e.g., change the `--mail-user` to your email address.
+    
+    (3) Replace the `<ENDPOINT_NAME>` to your created name.
 
-```bash
-python mnist_no_mpi.py
-```
+5. Start the funcX endpoint. The follwoing command will allocate resources you required from the `config.py` file above. [**Note**: Whenever you modify the `config.py`, you need to first run `funcx-endpoint stop <ENDPOINT_NAME>` and then re-start it to have the changes make effect.]
 
-## FEMNIST
+    ```
+    funcx-endpoint start <ENDPOINT_NAME>
+    ```
 
-### MPI communication
+## Submit Batch Job using Slurm
+6. Obtain your created endpoint ID by running the following command. Then copy and paste the ID to the corresponding field of `configs/clients/mnist_broad.yaml`.
 
-```bash
-mpiexec -n 204 python femnist.py --server ServerFedAvg --num_epochs 6 --client_lr 0.01
-```
-`--server : ServerFedAvg  or  ICEADMMServer  or IIADMMServer`
-### gRPC communication
+    ```
+    funcx-endpoint list
+    ```
 
-```bash
-mpiexec -n 204 python grpc_femnist.py
-```
+7. Check the `run_funcx_sync.sh` file, and make necessary modifications such as changing the `--mail-user`. Then you can submit the job
+
+    ```
+    sbatch run_funcx_sync.sh
+    ```
 

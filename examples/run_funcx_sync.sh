@@ -8,7 +8,7 @@
 #SBATCH --job-name=FaaSFuncX        # job name
 #SBATCH --time=00:30:00             # dd-hh:mm:ss for the job
 #SBATCH --constraint="projects"     # file system dependency: we put the dataset into /projects
-#SBATCH --mail-user=zl52@illinois.edu
+#SBATCH --mail-user=xxx@illinois.edu
 #SBATCH --mail-type=ALL
 ### GPU options ###
 #SBATCH --gpus-per-node=1

@@ -15,7 +15,7 @@ from funcx_endpoint.executors import HighThroughputExecutor
 user_opts = {
     'delta': {
         'worker_init': 'module load anaconda3_gpu; conda init bash; source ~/.bashrc; conda activate funcx',
-        'scheduler_options': '#SBATCH --mail-user=zl52@illinois.edu\n#SBATCH --mail-type=ALL\n#SBATCH --gpus-per-node=1\n#SBATCH --gpu-bind=none\n#SBATCH --constraint=projects',
+        'scheduler_options': '#SBATCH --mail-user=xxx@illinois.edu\n#SBATCH --mail-type=ALL\n#SBATCH --gpus-per-node=1\n#SBATCH --gpu-bind=none\n#SBATCH --constraint=projects',
     }
 }
 
@@ -56,7 +56,7 @@ config = Config(
 # urn:globus:auth:identity:{user_uuid}
 # urn:globus:groups:id:{group_uuid}
 meta = {
-    "name": "test",
+    "name": '<ENDPOINT_NAME>',
     "description": "",
     "organization": "",
     "department": "",
