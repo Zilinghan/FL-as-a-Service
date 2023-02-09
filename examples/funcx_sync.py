@@ -22,8 +22,6 @@ python grpc_mnist_client.py --host=localhost --client_id=0 --nclients=1
 """ read arguments """ 
 
 parser = argparse.ArgumentParser()  
-## appfl-funcx
-## appfl-funcx
 parser.add_argument("--client_config", type=str, default="configs/clients/mnist_broad.yaml")
 parser.add_argument("--config", type=str, default= "configs/fed_avg/funcx_fedavg_mnist.yaml") 
 

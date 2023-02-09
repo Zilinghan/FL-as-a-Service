@@ -1,15 +1,15 @@
 server:
-  device: cpu
+  device: cuda:0
   data_dir  : "./log_funcx_appfl/server"
   output_dir: "./log_funcx_appfl/server"
   
 clients:
   - name: appfl_test
     endpoint_id: "6c87988d-d067-43c9-a73f-063b51e1b33a"
-    device:  cpu
+    device:  cuda:0
     data_split: 0
-    output_dir: "/Users/zilinghanli/Documents/courses/appfl/APPFL_funcx_new/examples/output"
-    data_dir:   "/Users/zilinghanli/Documents/courses/appfl/APPFL_funcx_new/examples/output"
+    output_dir: "./output"
+    data_dir:   "./output"
     get_data:
       script_file: "./datasets/torchvision_datasets.py"
       call:   "get_data"

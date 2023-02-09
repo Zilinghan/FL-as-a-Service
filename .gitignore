@@ -11,7 +11,7 @@ examples/save_models
 examples/outputs/*
 examples/output/*
 examples/results/*
-examples/*.sh
+# examples/*.sh
 examples/datasets/PreprocessedData/
 examples/Slurm_outputs/*
 examples/PostProcessing/*
