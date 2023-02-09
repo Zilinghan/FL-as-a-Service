@@ -1,12 +1,13 @@
+from email.policy import default
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, List, Dict 
 from omegaconf import DictConfig, OmegaConf
 
-
+from typing import Optional
 from .fed.federated import *
 from .fed.iceadmm import *  ## TODO: combine iceadmm and iiadmm under the name of ADMM.
 from .fed.iiadmm import *
-
+from ..misc import *
 
 @dataclass
 class Config:
@@ -15,19 +16,19 @@ class Config:
     # Compute device
     device: str = "cpu"
 
-    # Number of training clients
+    # Number of training epochs
     num_clients: int = 1
 
     # Number of training epochs
     num_epochs: int = 2
 
     # Number of workers in DataLoader
-    num_workers: int = 0
+    num_workers: int = 8
 
     # Train data batch info
     batch_training: bool = True  ## TODO: revisit
     train_data_batch_size: int = 64
-    train_data_shuffle: bool = False
+    train_data_shuffle: bool = True
 
     # Indication of whether to validate or not using testing data
     validation: bool = True
@@ -58,7 +59,7 @@ class Config:
     save_model: bool = False
     save_model_dirname: str = ""
     save_model_filename: str = ""
-    checkpoints_interval: int = 2
+    checkpoints_interval: int = 1
 
     # Saving state_dict (clients)
     save_model_state_dict: bool = False
@@ -69,7 +70,6 @@ class Config:
     
     logginginfo: DictConfig = OmegaConf.create({})
     summary_file: str = ""
-
 
     #
     # gRPC configutations
@@ -83,3 +83,65 @@ class Config:
         {"id": 1, "host": "localhost", "port": 50051, "use_tls": False, "api_key": None}
     )
     client: DictConfig = OmegaConf.create({"id": 1})
+
+
+@dataclass 
+class FuncXServerConfig:
+    device      : str = "cpu"
+    output_dir  : str = "./"
+    data_dir    : str = "./"
+    s3_bucket   : Any = None
+
+@dataclass
+class ExecutableFunc:
+    module       : str = ""
+    call         : str = ""
+    script_file  : str = ""
+    source       : str = ""
+
+@dataclass
+class ClientTask:
+    task_id      : str  = ""
+    task_name    : str  = ""
+    client_idx   : int  = ""
+    pending      : bool = True
+    success      : bool = False
+    start_time   : float= -1
+    end_time     : float= -1
+    log          : Optional[Dict] = field(default_factory=dict)
+
+@dataclass
+class FuncXClientConfig:
+    data_split  : Any 
+    name        : str = ""
+    endpoint_id : str = ""
+    device      : str = "cpu"
+    output_dir  : str = "./"
+    data_dir    : str = "./"
+    get_data    :  DictConfig = OmegaConf.create({})
+    data_pipeline: DictConfig = OmegaConf.create({})
+
+@dataclass
+class FuncXConfig(Config):
+    get_data     : ExecutableFunc = field(default_factory=ExecutableFunc)
+    get_model    : ExecutableFunc = field(default_factory=ExecutableFunc)
+    clients      : List[FuncXClientConfig] = field(default_factory=list)
+    dataset      : str  = ""
+    loss         : str  = "CrossEntropy"
+    model_args   : List = field(default_factory=list)
+    model_kwargs : Dict = field(default_factory=dict)
+    server       : FuncXServerConfig
+    logging_tasks: List = field(default_factory=list) 
+    
+    # Testing and validation params
+    client_do_validation: bool = True
+    client_do_testing   : bool = True
+    server_do_validation: bool = True
+    server_do_testing   : bool = True
+    
+    # Testing and validation frequency
+    client_validation_step: int = 1
+    server_validation_step: int = 1
+
+    # Cloud storage
+    use_cloud_transfer: bool = False

@@ -50,6 +50,7 @@ def run_server(
     """ log for a server """
     logger = logging.getLogger(__name__)
     logger = create_custom_logger(logger, cfg)
+
     cfg["logginginfo"]["comm_size"] = comm_size
     cfg["logginginfo"]["DataSet_name"] = dataset_name
 
@@ -77,7 +78,7 @@ def run_server(
     Compute "weight[client] = data[client]/total_num_data" from a server    
     Scatter "weight information" to clients        
     """
-    num_data = comm.gather(0, root=0) # the server does not have any number of training data, so the first parameter is 0
+    num_data = comm.gather(0, root=0)
     total_num_data = 0
     for rank in range(1, comm_size):
         for val in num_data[rank].values():
@@ -191,7 +192,8 @@ def run_client(
     else:
         device = cfg.device
 
-    num_client_groups = np.array_split(range(num_clients), comm_size - 1)   # each processor may run training for 0 to multiple clients
+    num_client_groups = np.array_split(range(num_clients), comm_size - 1)
+
     """ log for clients"""
     outfile = {}
     for _, cid in enumerate(num_client_groups[comm_rank - 1]):
@@ -250,6 +252,13 @@ def run_client(
         for _, cid in enumerate(num_client_groups[comm_rank - 1])
     ]
 
+    ## name of parameters
+    model_name = []
+    for client in clients:
+        for name, _ in client.model.named_parameters():
+            model_name.append(name)
+        break
+
     do_continue = comm.bcast(None, root=0)
 
     local_states = OrderedDict()
@@ -261,7 +270,10 @@ def run_client(
         """ Update "local_states" based on "global_state" """
         for client in clients:
             cid = client.id
-            ## initial point for a client model            
+            ## initial point for a client model
+            for name in client.model.state_dict():
+                if name not in model_name:
+                    global_state[name] = client.model.state_dict()[name]
             client.model.load_state_dict(global_state)
 
             ## client update

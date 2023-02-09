@@ -44,6 +44,7 @@ def run_client(
         train_data (Dataset): training data
         gpu_id (int): GPU ID
     """
+
     logger = logging.getLogger(__name__)
     if cfg.server.use_tls == True:
         uri = cfg.server.host
@@ -96,7 +97,6 @@ def run_client(
         logger.error(f"[Client ID: {cid: 03}] weight ({weight}) retrieval failed.")
         return
 
-
     "Run validation if test data is given or the configuration is enabled."
     if cfg.validation == True and len(test_data) > 0:
         test_dataloader = DataLoader(
@@ -126,6 +126,11 @@ def run_client(
         test_dataloader,
         **cfg.fed.args,
     )
+
+    ## name of parameters
+    model_name = []
+    for name, _ in fed_client.model.named_parameters():
+        model_name.append(name)
 
     # Start federated learning.
     cur_round_number, job_todo = comm.get_job(Job.INIT)

@@ -109,7 +109,12 @@ def run_serial(
             **cfg.fed.args,
         )
         for k in range(cfg.num_clients)
-    ] 
+    ]
+
+    ## name of parameters
+    model_name = []
+    for name, _ in server.model.named_parameters():
+        model_name.append(name)
     
     start_time = time.time()
     test_loss = 0.0
@@ -125,7 +130,10 @@ def run_serial(
         local_update_start = time.time()
         for k, client in enumerate(clients):
             
-            ## initial point for a client model            
+            ## initial point for a client model
+            for name in server.model.state_dict():
+                if name not in model_name:
+                    global_state[name] = client.model.state_dict()[name]
             client.model.load_state_dict(global_state)
 
             ## client update

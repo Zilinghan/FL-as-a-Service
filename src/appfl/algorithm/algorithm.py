@@ -143,6 +143,7 @@ class BaseServer:
         return contents
 
     def log_summary(self, cfg: DictConfig, logger):
+
         logger.info("Device=%s" % (cfg.device))
         logger.info("#Processors=%s" % (cfg["logginginfo"]["comm_size"]))
         logger.info("#Clients=%s" % (self.num_clients))
@@ -293,20 +294,19 @@ class BaseClient:
                 target = target.to(self.cfg.device)
                 output = self.model(img)
                 loss += self.loss_fn(output, target).item()
-
                 if output.shape[1] == 1:
                     pred = torch.round(output)
                 else:
                     pred = output.argmax(dim=1, keepdim=True)
 
                 correct += pred.eq(target.view_as(pred)).sum().item()
-
+            
         # FIXME: do we need to sent the model to cpu again?
         # self.model.to("cpu")
 
         loss = loss / tmpcnt
         accuracy = 100.0 * correct / tmptotal
-
+        # TODO: add other metrics precision, recall, ...
         return loss, accuracy
 
     """ 

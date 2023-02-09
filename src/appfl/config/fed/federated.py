@@ -56,5 +56,7 @@ class Federated:
             ## clip_value: 1
             "clip_value": False,
             "clip_norm": 1,
+            "client_weights": "sample_size",
+            "server_lr_decay_exp_gamma": 1.0
         }
     )
