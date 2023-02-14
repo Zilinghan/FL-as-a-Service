@@ -6,7 +6,6 @@ def get_data(
     import torchvision
     from   torchvision.transforms import ToTensor
     import numpy as np
-    import os
     import os.path as osp
     import torch
     from appfl.misc.data import Dataset
@@ -32,4 +31,4 @@ def get_data(
             torch.FloatTensor(data_input),
             torch.tensor(data_label),
         )
-        
+    

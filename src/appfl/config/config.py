@@ -112,7 +112,7 @@ class ClientTask:
 
 @dataclass
 class FuncXClientConfig:
-    data_split  : Any 
+    data_split  : Any = 0
     name        : str = ""
     endpoint_id : str = ""
     device      : str = "cpu"

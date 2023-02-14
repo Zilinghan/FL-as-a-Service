@@ -1,29 +1,19 @@
-import time
-import os.path as osp
-
-import numpy as np
 import torch
 import torchvision
-from torchvision.transforms import ToTensor
+import os.path as osp
 from appfl.config import *
 from appfl.misc.data import *
 from appfl.misc.utils import *
 from appfl.misc.logging import *
-from models.cnn  import *
 import appfl.run_funcx_server as funcx_server
+from torchvision.transforms import ToTensor
 import argparse
-
 from funcx import FuncXClient
 
-"""
-python grpc_mnist_client.py --host=localhost --client_id=0 --nclients=1
-"""
-
 """ read arguments """ 
-
 parser = argparse.ArgumentParser()  
-parser.add_argument("--client_config", type=str, default="configs/clients/mnist_broad.yaml")
-parser.add_argument("--config", type=str, default= "configs/fed_avg/funcx_fedavg_mnist.yaml") 
+parser.add_argument("--client_config", type=str, default="../client/config/mnist.yaml")
+parser.add_argument("--server_config", type=str, default= "config/mnist.yaml") 
 
 ## other agruments
 parser.add_argument('--clients-test', action='store_true', default=False)
@@ -54,18 +44,15 @@ def main():
     mode = 'clients_testing' if args.clients_test else 'train'
 
     ## loading funcX configs from file
-    load_funcx_device_config(cfg, args.client_config)
-    load_funcx_config(cfg, args.config)
-
-    ## using funcx ClientOptimizer object
-    cfg.fed.clientname = "FuncxClientOptim"
+    load_appfl_client_config_funcx(cfg, args.client_config)
+    load_appfl_server_config_funcx(cfg, args.server_config)
     
     ## tensorboard
     cfg.use_tensorboard= args.use_tensorboard
     
     ## config logger
     mLogging.config_logger(cfg,
-        osp.basename(args.config), osp.basename(args.client_config), mode=mode
+        osp.basename(args.server_config), osp.basename(args.client_config), mode=mode
     )
 
     ## validation

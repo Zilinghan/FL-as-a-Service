@@ -1,6 +1,9 @@
 .gitignore
 .DS_Store
 outputs/
+notes/
+funcx/
+example-sep/*/output
 src/appfl/.DS_Store
 src/appfl/algorithm/mryu.py
 note

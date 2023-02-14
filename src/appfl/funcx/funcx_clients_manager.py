@@ -172,6 +172,12 @@ class APPFLFuncXTrainingClients:
                 **kwargs,
                 endpoint_id = client_cfg.endpoint_id, 
                 function_id = func_uuid)
+            # For another funcx version
+            # batch.add(
+            #     func_uuid,
+            #     client_cfg.endpoint_id,
+            #     args=(self.cfg, client_idx, *args),
+            #     kwargs=kwargs)
         # Execute training tasks at clients
         # TODO: Assuming that all tasks do not have the same start time
         task_ids  = self.fxc.batch_run(batch)
