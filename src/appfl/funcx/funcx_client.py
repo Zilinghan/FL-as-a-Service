@@ -28,6 +28,7 @@ def client_training(
     do_validation=False,
     ):
     from appfl.misc.logging import ClientLogger
+    from collections import OrderedDict
     ## Prepare logger
     cli_logger = ClientLogger()
     cli_logger.mark_event("start_endpoint_execution")
@@ -86,6 +87,11 @@ def client_training(
     ## Perform a client update
     cli_logger.start_timer("training_client_update")
     client_state, cli_logger = client.update(cli_logger= cli_logger)
+    
+    client_state_primal_cpu = OrderedDict()
+    for k, v in client_state["primal"].items():
+        client_state_primal_cpu[k] = v.cpu()
+
     cli_logger.stop_timer("training_client_update")
 
     ## Send client state to server

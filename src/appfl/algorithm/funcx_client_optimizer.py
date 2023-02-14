@@ -174,7 +174,7 @@ class FuncxClientOptim(BaseClient):
 
         self.round += 1
 
-        self.primal_state = copy.deepcopy(self.model.state_dict())
+        self.primal_state = copy.deepcopy(self.model.to('cpu').state_dict())
 
         """ Differential Privacy  """
         if self.epsilon != False:
