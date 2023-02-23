@@ -1,6 +1,7 @@
 .gitignore
 .DS_Store
 outputs/
+output/
 notes/
 funcx/
 example-sep/*/output
