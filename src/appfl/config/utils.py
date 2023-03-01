@@ -239,12 +239,20 @@ def load_appfl_server_config_funcx_web_v2(cfg: FuncXConfig, server_config: str):
 
     ## Load the model
     src = OmegaConf.create(ExecutableFunc())
-    model_dict = {'CNN': CNN.__file__}
-    # src.module = model_dict[data['model_type']]
-    # print(CNN.__file__)
-    # print(os.path.abspath(CNN.__file__))
-    # src.call = 'get_model'
-    src.script_file = model_dict[data['model_type']]
+    if 'model_type' in data:
+        print("Using provided model templates......")
+        model_dict = {'CNN': CNN.__file__}
+        src.script_file = model_dict[data['model_type']]
+        # with open(src.script_file) as fi:
+        #     src.source = fi.read()
+        # src.call = get_call(src.script_file)
+        # cfg.get_model = src
+
+        ## Load model configs
+        cfg.model_kwargs = data['model']
+    else:
+        print("Using custom models......")
+        src.script_file = data['model_file']
     with open(src.script_file) as fi:
         src.source = fi.read()
     src.call = get_call(src.script_file)
@@ -264,6 +272,5 @@ def load_appfl_server_config_funcx_web_v2(cfg: FuncXConfig, server_config: str):
     ## Load dataset configs
     cfg.dataset  = data['dataset']['name']
   
-    ## Load model configs
-    cfg.model_kwargs = data['model']
+    
 
