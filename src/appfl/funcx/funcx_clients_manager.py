@@ -62,7 +62,7 @@ class APPFLFuncXTrainingClients:
     def __init__(self, cfg: DictConfig, fxc : FuncXClient, logger):
         self.cfg = cfg
         self.fxc = fxc
-        self.fx  = FuncXExecutor(fxc, batch_enabled = False)
+        self.fx  = FuncXExecutor(funcx_client=fxc, batch_enabled = False)
         self.executing_tasks = {}
         # Logging
         self.logger  = logger
