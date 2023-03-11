@@ -301,7 +301,8 @@ class APPFLFuncXTrainingClients:
         self.logger.info("Shutting down all clients.")
         
         for client_idx in self.clients:
-            self.clients[client_idx].future.cancel()
+            if self.clients[client_idx].future is not None:
+                self.clients[client_idx].future.cancel()
         
         self.fx.shutdown()
         self.logger.info("All clients have been shutted down successfully.")

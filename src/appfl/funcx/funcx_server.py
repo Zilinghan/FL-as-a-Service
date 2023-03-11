@@ -219,3 +219,5 @@ class APPFLFuncXServer(abc.ABC):
         self._do_server_testing()
         # Wrap-up
         self._finalize_experiment()
+        # Shutdown all clients
+        self.trn_endps.shutdown_all_clients()
