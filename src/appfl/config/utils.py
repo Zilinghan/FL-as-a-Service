@@ -6,6 +6,8 @@ from .config import *
 import yaml
 import os.path as osp
 from ..misc.utils import *
+from datetime import datetime
+
 def show():
     conf = OmegaConf.structured(Config)
     print(OmegaConf.to_yaml(conf))
@@ -159,6 +161,9 @@ def load_appfl_client_config_funcx_web(cfg: FuncXConfig, config_files: List[str]
         with open(config_file) as fi:
             data = yaml.load(fi, Loader = yaml.SafeLoader)
         client = data['client']
+        start_time = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        client['output_dir'] += f'_{cfg.dataset}_UTC_Time_{start_time}'
+        print(f'Output Directory: {client["output_dir"]}')
         # load the client dataloader
         src =  OmegaConf.create(ExecutableFunc())
         src.script_file = dataloader_file
