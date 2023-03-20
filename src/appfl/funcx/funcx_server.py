@@ -221,3 +221,6 @@ class APPFLFuncXServer(abc.ABC):
         self._finalize_experiment()
         # Shutdown all clients
         self.trn_endps.shutdown_all_clients()
+    def cleanup(self):
+        # Shutdown all clients
+        self.trn_endps.shutdown_all_clients()

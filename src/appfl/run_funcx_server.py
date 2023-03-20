@@ -1,3 +1,4 @@
+import traceback
 from omegaconf import DictConfig
 from funcx import FuncXClient
 import torch.nn as nn
@@ -14,10 +15,13 @@ def run_server(
     mode = 'train'
     ):
     serv = APPFLFuncXSyncServer(cfg, fxc)
-
-    serv.set_server_dataset(
-        validation_dataset=val_data,
-        testing_dataset= test_data
-        ) 
-    
-    serv.run(model, loss_fn, mode)
+    try:
+        serv.set_server_dataset(
+            validation_dataset=val_data,
+            testing_dataset= test_data
+            ) 
+        
+        serv.run(model, loss_fn, mode)
+    except Exception as e:
+        traceback.print_exc()
+        serv.cleanup()
