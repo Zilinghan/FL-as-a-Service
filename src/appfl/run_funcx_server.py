@@ -24,4 +24,5 @@ def run_server(
         serv.run(model, loss_fn, mode)
     except Exception as e:
         traceback.print_exc()
+        print("Training fails, cleaning things up... ...")
         serv.cleanup()

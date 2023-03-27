@@ -209,6 +209,9 @@ class APPFLFuncXTrainingClients:
         client_logs       = OrderedDict()
         while (not stop_aggregate):
             results = self.fxc.get_batch_result(list(self.executing_tasks))
+            if len(results) != len(list(self.executing_tasks)):
+                print("Exception occurs on client side, stop the training!")
+                raise
             for task_id in results:
                 if results[task_id]['pending'] == False:
                     self.executing_tasks[task_id].pending = False
