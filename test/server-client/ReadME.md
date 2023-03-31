@@ -3,7 +3,7 @@
 ### Installation
 First create a virtual environment.
 ```
-conda create -n grpc python=3.10.6
+conda create -n grpc python=3.8
 conda activate grpc
 ```
 Then install the packages.
