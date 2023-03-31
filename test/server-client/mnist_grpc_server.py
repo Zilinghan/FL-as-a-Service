@@ -89,7 +89,8 @@ def main():
     hostname = socket.gethostname()
     ip_address = socket.gethostbyname(hostname)
     cfg.server.host = ip_address
-    print(f"The IP address of the server is {ip_address}...")
+    cfg.server.port = 8000
+    print(f"Server is running on {cfg.server.host}:{cfg.server.port}...")
 
     ## outputs        
     cfg.output_dirname = "./outputs_%s_%s"%(args.dataset, args.server)     
