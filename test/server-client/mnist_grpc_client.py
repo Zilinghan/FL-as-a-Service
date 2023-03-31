@@ -116,6 +116,7 @@ def main():
     cfg.fed.args.num_local_epochs = args.num_local_epochs
     
     cfg.server.host = args.host
+    cfg.server.port = 8000
     
     ## outputs        
     cfg.output_dirname = "./outputs_%s_%s"%(args.dataset, args.client_optimizer)     
