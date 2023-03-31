@@ -1,5 +1,6 @@
 import sys
 import time
+import socket
 import logging
 import argparse
 sys.path.append('../..')
@@ -23,32 +24,28 @@ python mnist_grpc_server.py --host=192.168.10.50 --num_clients=2
 
 parser = argparse.ArgumentParser() 
 
-parser.add_argument('--device', type=str, default="cpu")    
+parser.add_argument('--device', type=str, default="cpu")                 
 
-## dataset
-parser.add_argument('--dataset', type=str, default="MNIST")   
-parser.add_argument('--num_channel', type=int, default=1)   
-parser.add_argument('--num_classes', type=int, default=10)   
-parser.add_argument('--num_pixel', type=int, default=28)   
+parser.add_argument('--dataset', type=str, default="MNIST")             # Only used for logging, @Hieu: you can change it to COVID/ECG  
 
 ## clients
-parser.add_argument('--num_clients', type=int, default=2)    
+parser.add_argument('--num_clients', type=int, default=2)               # number of training clients
 
 ## server
-parser.add_argument('--server', type=str, default="ServerFedAvg")    
-parser.add_argument('--num_epochs', type=int, default=2) 
-parser.add_argument('--validation', type=bool, default=True)     
-parser.add_argument('--host', type=str, default="localhost") 
+# @Hieu: Please make sure that the server uses the same federation algorithm as APPFLx
+parser.add_argument('--server', type=str, default="ServerFedAvg")       # name of the server algorithm     
+parser.add_argument('--num_epochs', type=int, default=2)                # number of server global training epochs
+parser.add_argument('--validation', type=bool, default=True)            # whether to use server validation: @Hieu, if COVID/ECG do not have server validation dataset, set this to False
  
 args = parser.parse_args()    
 
 if torch.cuda.is_available():
     args.device="cuda"
  
- 
+# @Hieu: if you are not doing validation/test on the server side, safely ignore this
 def get_test_data():
     # test data for a server
-    test_data_raw = eval("torchvision.datasets." + args.dataset)(
+    test_data_raw = eval("torchvision.datasets.MNIST")(
         f"./datasets/RawData", download=True, train=False, transform=ToTensor()
     )
 
@@ -64,10 +61,10 @@ def get_test_data():
 
     return test_dataset
 
-
+# @Hieu: Please change this get_model function to load your model
 def get_model():
     ## User-defined model
-    model = CNN(args.num_channel, args.num_classes, args.num_pixel)
+    model = CNN(1, 10, 28)
     return model
 
 
@@ -87,7 +84,12 @@ def main():
     ## server
     cfg.fed.servername = args.server
     cfg.num_epochs = args.num_epochs
-    cfg.server.host = args.host
+
+    # get the local IP address
+    hostname = socket.gethostname()
+    ip_address = socket.gethostbyname(hostname)
+    cfg.server.host = ip_address
+    print(f"The IP address of the server is {ip_address}...")
 
     ## outputs        
     cfg.output_dirname = "./outputs_%s_%s"%(args.dataset, args.server)     
@@ -97,33 +99,19 @@ def main():
 
     """ User-defined model """    
     model = get_model()
-    loss_fn = torch.nn.CrossEntropyLoss()  
+    loss_fn = torch.nn.CrossEntropyLoss()  #@Hieu: check the loss function as well
 
-
-    ## loading models 
+    ## loading and saving models 
     cfg.load_model = False
-    if cfg.load_model == True:
-        cfg.load_model_dirname      = "./save_models"
-        cfg.load_model_filename     = "Model"               
-        model = load_model(cfg)      
+    cfg.save_model = False
 
     """ User-defined data """        
-    test_dataset = get_test_data()
-    
-    ## Sanity check for the user-defined data
-    if cfg.data_sanity == True:
-        data_sanity_check_testset(test_dataset, args.num_channel, args.num_pixel)        
+    if cfg.validation:
+        test_dataset = get_test_data()   
+    else:
+        test_dataset = Dataset()   
  
-    print(
-        "-------Loading_Time=",
-        time.time() - start_time,
-    ) 
-    
-    """ saving models """
-    cfg.save_model = False
-    if cfg.save_model == True:
-        cfg.save_model_dirname      = "./save_models"
-        cfg.save_model_filename     = "MNIST_CNN"    
+    print("-------Loading_Time=", time.time() - start_time)    
  
     grpc_server.run_server(cfg, model, loss_fn, args.num_clients, test_dataset)
 

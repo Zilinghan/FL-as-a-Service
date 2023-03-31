@@ -4,6 +4,7 @@ from omegaconf import DictConfig
 import logging
 import random
 import numpy as np
+from datetime import datetime 
 
 
 def validation(self, dataloader):
@@ -86,6 +87,18 @@ def client_log(dir, output_filename):
     outfile = open(filename, "a")
 
     return outfile
+
+def client_log_new(dir, output_filename):
+
+    if os.path.isdir(dir) == False:
+        os.mkdir(dir)
+
+    file_ext = ".txt"
+    filename = dir + "/%s_%s%s" % (output_filename, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), file_ext)
+
+    outfile = open(filename, "a")
+
+    return filename, outfile
 
 
 def load_model(cfg: DictConfig):

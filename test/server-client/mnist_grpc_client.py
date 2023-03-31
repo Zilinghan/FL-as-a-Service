@@ -1,5 +1,6 @@
 import sys
 import time
+import socket
 import logging
 import argparse
 sys.path.append('../..')
@@ -23,32 +24,33 @@ python mnist_grpc_client.py --host=192.168.10.50 --client_id=0 --num_clients=2
 
 parser = argparse.ArgumentParser() 
 
-parser.add_argument('--device', type=str, default="cpu")    
+parser.add_argument('--device', type=str, default="cpu")                  
 
 ## dataset
-parser.add_argument('--dataset', type=str, default="MNIST")   
-parser.add_argument('--num_channel', type=int, default=1)   
-parser.add_argument('--num_classes', type=int, default=10)   
-parser.add_argument('--num_pixel', type=int, default=28)   
+parser.add_argument('--dataset', type=str, default='MNIST')            # number of the dataset: ONLY for logging purpose
 
 ## clients
-parser.add_argument('--num_clients', type=int, default=1)    
-parser.add_argument('--client_optimizer', type=str, default="Adam")    
-parser.add_argument('--client_lr', type=float, default=1e-3)    
-parser.add_argument('--num_local_epochs', type=int, default=3)    
-parser.add_argument('--validation', type=bool, default=True)
-parser.add_argument('--client_id', type=int, required=True)
+parser.add_argument('--num_clients', type=int, default=2)               # number of clients in training
+parser.add_argument('--client_optimizer', type=str, default="Adam")     # client optimizer
+parser.add_argument('--client_lr', type=float, default=1e-3)            # client learning rate
+parser.add_argument('--num_local_epochs', type=int, default=3)          # number of local epochs for each client
+parser.add_argument('--validation', type=bool, default=False)           # whether to do client validation: False if we only want to measure the training time
+parser.add_argument('--train_data_batch_size', type=int, default=64)    # batch size for the training data
+
+parser.add_argument('--client_id', type=int, required=True)             # id for the client, should in the range [0, ..., num_clients-1]
 
 ## server
-parser.add_argument('--host', type=str, default='localhost')
+parser.add_argument('--host', type=str, default='localhost')            # ip address of the server
 
 args = parser.parse_args()    
 
 if torch.cuda.is_available():
     args.device="cuda"
  
+
+# @Hieu: Please change this get_data function to load your dataset
 def get_data():
-    test_data_raw = eval("torchvision.datasets." + args.dataset)(
+    test_data_raw = eval("torchvision.datasets.MNIST")(
         f"./datasets/RawData", download=True, train=False, transform=ToTensor()
     )
 
@@ -63,7 +65,7 @@ def get_data():
     )
 
     # training data for multiple clients
-    train_data_raw = eval("torchvision.datasets." + args.dataset)(
+    train_data_raw = eval("torchvision.datasets.MNIST")(
         f"./datasets/RawData", download=False, train=True, transform=ToTensor()
     )
 
@@ -84,12 +86,12 @@ def get_data():
             )
         )
 
-    return train_datasets, test_dataset
+    return train_datasets[args.client_id], test_dataset
 
-
+# @Hieu: Please change this get_model function to load your model
 def get_model():
     ## User-defined model
-    model = CNN(args.num_channel, args.num_classes, args.num_pixel)
+    model = CNN(1, 10, 28)
     return model
 
 
@@ -108,9 +110,11 @@ def main():
 
     ## clients
     cfg.num_clients = args.num_clients
+    # @Hieu: Please check that gPRC is using the same hyperparameters for client side optimization
     cfg.fed.args.optim = args.client_optimizer
     cfg.fed.args.optim_args.lr = args.client_lr
     cfg.fed.args.num_local_epochs = args.num_local_epochs
+    
     cfg.server.host = args.host
     
     ## outputs        
@@ -123,32 +127,18 @@ def main():
     model = get_model()
     loss_fn = torch.nn.CrossEntropyLoss()  
 
-    ## loading models 
+    ## disable loading and saving models 
     cfg.load_model = False
-    if cfg.load_model == True:
-        cfg.load_model_dirname      = "./save_models"
-        cfg.load_model_filename     = "Model"               
-        model = load_model(cfg)      
+    cfg.save_model = False 
 
     """ User-defined data """        
     train_datasets, test_dataset = get_data()
+    if not cfg.validation:
+        test_dataset = Dataset()    # clean the test dataset if no validation
     
-    ## Sanity check for the user-defined data
-    if cfg.data_sanity == True:
-        data_sanity_check(train_datasets, test_dataset, args.num_channel, args.num_pixel)        
-
-    print(
-        "-------Loading_Time=",
-        time.time() - start_time,
-    ) 
-    
-    """ saving models """
-    cfg.save_model = False
-    if cfg.save_model == True:
-        cfg.save_model_dirname      = "./save_models"
-        cfg.save_model_filename     = "MNIST_CNN"    
+    print("-------Loading_Time=", time.time() - start_time)  
      
-    grpc_client.run_client(cfg, args.client_id, model, loss_fn, train_datasets[args.client_id], args.client_id, test_dataset)
+    grpc_client.run_client(cfg, args.client_id, model, loss_fn, train_datasets, 0, test_dataset)
             
     print("------DONE------", args.client_id)
 

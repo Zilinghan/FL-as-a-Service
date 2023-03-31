@@ -44,7 +44,26 @@ def run_client(
         train_data (Dataset): training data
         gpu_id (int): GPU ID
     """
+    
+    
+    # Set up the logger
     logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+    output_filename = cfg.output_filename + "_client_%s" % (cid)
+    output_filename, outfile = client_log_new(cfg.output_dirname, output_filename)
+    fmt = logging.Formatter('[%(asctime)s %(levelname)-4s]: %(message)s')  
+    
+    # Create handlers
+    c_handler = logging.StreamHandler()
+    f_handler = logging.FileHandler(output_filename)
+    c_handler.setLevel(logging.INFO)
+    f_handler.setLevel(logging.INFO)
+    c_handler.setFormatter(fmt)
+    f_handler.setFormatter(fmt)
+    # Add handlers to the logger
+    logger.addHandler(c_handler)
+    logger.addHandler(f_handler)
+    
     if cfg.server.use_tls == True:
         uri = cfg.server.host
     else:
@@ -52,19 +71,15 @@ def run_client(
 
     ## We assume to have as many GPUs as the number of MPI processes.
     if cfg.device == "cuda":
-        device = f"cuda:{gpu_id}"
+        cfg.device = f"cuda:{gpu_id}"
     else:
-        device = cfg.device
-
-    """ log for clients"""
-    output_filename = cfg.output_filename + "_client_%s" % (cid)
-    outfile = client_log(cfg.output_dirname, output_filename)
+        cfg.device = cfg.device
 
     batch_size = cfg.train_data_batch_size
     if cfg.batch_training == False:
-        batchsize = len(train_data)
+        cfg.train_data_batch_size = len(train_data)
 
-    logger.debug(
+    logger.info(
         f"[Client ID: {cid: 03}] connecting to (uri,tls)=({uri},{cfg.server.use_tls})."
     )
     comm = FLClient(
@@ -82,7 +97,7 @@ def run_client(
     try:
         while True:
             weight = comm.get_weight(len(train_data))
-            logger.debug(
+            logger.info(
                 f"[Client ID: {cid: 03}] trial {i}, requesting weight ({weight})."
             )
             if weight >= 0.0:
@@ -136,7 +151,7 @@ def run_client(
 
     while job_todo != Job.QUIT:
         if job_todo == Job.TRAIN:
-            if prev_round_number != cur_round_number:
+            if prev_round_number != cur_round_number: 
                 logger.info(
                     f"[Client ID: {cid: 03} Round #: {cur_round_number: 03}] Start training"
                 )

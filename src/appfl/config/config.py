@@ -76,6 +76,7 @@ class Config:
     #
 
     # 100 MB for gRPC maximum message size
+    # @Hieu: Check if this max msg size is sufficient
     max_message_size: int = 104857600
 
     operator: DictConfig = OmegaConf.create({"id": 1})

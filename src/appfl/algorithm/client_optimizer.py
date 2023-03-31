@@ -24,7 +24,7 @@ class ClientOptim(BaseClient):
 
         self.round = 0
 
-        super(ClientOptim, self).client_log_title()
+        # super(ClientOptim, self).client_log_title()
 
     def update(self):
         
@@ -43,6 +43,7 @@ class ClientOptim(BaseClient):
                 self.test_dataloader
             )
             per_iter_time = time.time() - start_time
+            super(ClientOptim, self).client_log_title()
             super(ClientOptim, self).client_log_content(
                 0, per_iter_time, 0, 0, test_loss, test_accuracy
             )
@@ -86,6 +87,7 @@ class ClientOptim(BaseClient):
                     self.test_dataloader
                 )
                 per_iter_time = time.time() - start_time
+                super(ClientOptim, self).client_log_title()
                 super(ClientOptim, self).client_log_content(
                     t+1, per_iter_time, train_loss, train_accuracy, test_loss, test_accuracy
                 )
