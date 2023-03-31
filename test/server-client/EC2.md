@@ -1,8 +1,14 @@
 # Deploy a gRPC server on EC2
 
-1. Create an EC2 instance [here](https://console.aws.amazon.com/ec2/) by referring to this [guide](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EC2_GetStarted.html).
+1. Create an EC2 instance [here](https://console.aws.amazon.com/ec2/) by referring to this [guide](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EC2_GetStarted.html). **NOTE:** 
 
-    **NOTE:** Please select **Amazon Linux 2 AMI (HVM) - Kernel 5.10, SSD Volumn Type** as your OS images. Now I select **t2.micro** as the instance type, which is very cheap for the deployment stage. For the security group, we should allow HTTP, HTTPS inbound traffic from all sources (0.0.0.0/0), and ssh from your own IP address for development. Allocate **more than 20GB** of General Purpose SSD (gp2).
+    (1) Please select **Amazon Linux 2 AMI (HVM) - Kernel 5.10, SSD Volumn Type** as your OS images. 
+
+    (2) Now I select **t2.micro** as the instance type, which is very cheap for the deployment stage (free-tier eligible). 
+    
+    (3) For the security group, we should allow TCP inbound traffic for port 8000 from all sources (0.0.0.0/0), and ssh from your own IP address for development. 
+    
+    (4) Allocate **more than 20GB** of General Purpose SSD (gp2).
 
 2. Connect to your EC2 instance using ssh. `your-pem.pem` is a key you create in this [guide](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EC2_GetStarted.html).
     ```
@@ -21,7 +27,7 @@
     $ cat ~/.ssh/id_rsa.pub
     ```
 
-5. Allocate more memory from SSD using swapfile. Run the following command to create a swap file with a size of 8 GB (you can adjust the size as needed).
+5. Allocate more memory from SSD using swapfile. Run the following command to create a swap file with a size of 10 GB (you can adjust the size as needed).
     ```
     $ sudo fallocate -l 10G /swapfile
     ```
@@ -64,7 +70,10 @@
     pip install torchvision
     ```
 
-9. Start the server. **Note: For EC2, you should not use the printed IP address, which is the private IP, instead, go to EC2 console and use the public IP**
+9. Clone the repository and start the server. **Note: For EC2, you should not use the printed IP address, which is the private IP, instead, go to EC2 console and use the public IP**
     ```
+    cd ~
+    git clone git@github.com:Zilinghan/FL-as-a-Service.git gRPC
+    cd gRPC/test/server-client
     python mnist_grpc_server.py --num_clients=2
     ```
