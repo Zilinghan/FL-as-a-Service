@@ -1,77 +1,106 @@
-import logging
 import os
-from collections import OrderedDict
-
-from appfl.misc.logging import ClientLogger
-from .algorithm import BaseClient
-
+import copy
+import time
 import torch
+import numpy as np
+from sklearn import metrics
 from torch.optim import *
 from torch.nn import functional as F
+from collections import OrderedDict
+from .algorithm import BaseClient
 
-from torch.utils.data import DataLoader
-import copy
-
-import numpy as np
-import time
-
-from sklearn import metrics
 class FuncxClientOptim(BaseClient):
-    def __init__(
-        self, id, weight, model, loss_fn, dataloader, cfg, outfile, test_dataloader, **kwargs
-    ):
-        super(FuncxClientOptim, self).__init__(
-            id, weight, model, loss_fn, dataloader, cfg, outfile, test_dataloader
-        )
-        self.__dict__.update(kwargs)
-
-        self.round = 0
-
+    def __init__(self, id, weight, model, loss_fn, dataloader, cfg, outfile, test_dataloader, **kwargs):
+        super(FuncxClientOptim, self).__init__(id, weight, model, loss_fn, dataloader, cfg, outfile, test_dataloader)
         super(FuncxClientOptim, self).client_log_title()
+        self.__dict__.update(kwargs)
+        self.round = 0
+        self.global_model = model.state_dict()
 
+    # def client_validation(self, dataloader):
+    #     if self.loss_fn is None or dataloader is None:
+    #         return 0.0, 0.0
+
+    #     self.model.to(self.cfg.device)
+    #     self.model.eval()
+    #     loss = 0
+    #     correct = 0
+    #     tmpcnt = 0
+    #     tmptotal = 0
+
+    #     preds   = []
+    #     targets = []
+    #     with torch.no_grad():
+    #         for img, target in dataloader:
+    #             tmpcnt += 1
+    #             tmptotal += len(target)
+    #             img     = img.to(self.cfg.device)
+    #             target  = target.to(self.cfg.device)
+    #             output  = self.model(img)
+    #             loss    += self.loss_fn(output, target).item()
+    #             loss    += self.compute_residual()
+                
+    #             if output.shape[1] == 1:
+    #                 pred = torch.round(output)
+    #             else:
+    #                 pred = F.softmax(output)
+    #                 # pred = output.argmax(dim=1, keepdim=True)
+    #             preds.append(pred.cpu().detach().numpy())
+    #             targets.append(target.cpu().detach().numpy())
+
+    #     # FIXME: do we need to sent the model to cpu again?
+    #     # self.model.to("cpu")
+        
+    #     targets = np.concatenate(targets)
+    #     preds   = np.concatenate(preds)
+
+    #     preds_binary = preds.argmax(axis=1) 
+    #     acc = (preds_binary == targets).mean()
+    #     prec,rec, f1, sprt  = metrics.precision_recall_fscore_support(preds_binary, targets, average="binary")
+    #     auc = metrics.roc_auc_score(targets, preds[:, 1])
+    #     # correct += pred.eq(preds.argmax(dim=1, keepdim=True).view_as(pred)).sum().item()    
+    #     return loss, {'acc': acc, 'prec': prec, 'rec': rec, 'f1': f1, 'auc': auc}
+    
     def client_validation(self, dataloader):
-
         if self.loss_fn is None or dataloader is None:
             return 0.0, 0.0
-
         self.model.to(self.cfg.device)
         self.model.eval()
         loss = 0
         correct = 0
         tmpcnt = 0
         tmptotal = 0
-
-        preds   = []
-        targets = []
         with torch.no_grad():
             for img, target in dataloader:
                 tmpcnt += 1
                 tmptotal += len(target)
-                img     = img.to(self.cfg.device)
-                target  = target.to(self.cfg.device)
-                output  = self.model(img)
-                loss    += self.loss_fn(output, target).item()
-                
+                img = img.to(self.cfg.device)
+                target = target.to(self.cfg.device)
+                output = self.model(img)
+                loss += self.loss_fn(output, target).item()
+                loss += self.compute_residual()
                 if output.shape[1] == 1:
                     pred = torch.round(output)
                 else:
-                    pred = F.softmax(output)
-                    # pred = output.argmax(dim=1, keepdim=True)
-                preds.append(pred.cpu().detach().numpy())
-                targets.append(target.cpu().detach().numpy())
-
+                    pred = output.argmax(dim=1, keepdim=True)
+                correct += pred.eq(target.view_as(pred)).sum().item()
+            
         # FIXME: do we need to sent the model to cpu again?
         # self.model.to("cpu")
-        
-        targets = np.concatenate(targets)
-        preds   = np.concatenate(preds)
 
-        preds_binary = preds.argmax(axis=1) 
-        acc = (preds_binary == targets).mean()
-        prec,rec, f1, sprt  = metrics.precision_recall_fscore_support(preds_binary, targets, average="binary")
-        auc = metrics.roc_auc_score(targets, preds[:, 1])
-        # correct += pred.eq(preds.argmax(dim=1, keepdim=True).view_as(pred)).sum().item()    
-        return loss, {'acc': acc, 'prec': prec, 'rec': rec, 'f1': f1, 'auc': auc}
+        loss = loss / tmpcnt
+        accuracy = 100.0 * correct / tmptotal
+        # TODO: add other metrics precision, recall, ...
+        return loss, accuracy
+
+    def compute_residual(self) -> float:
+        if self.cfg.fed.args.rho is None: return 0
+        if self.cfg.fed.args.rho == 0.0: return 0
+        primal_res = 0
+        for (_, param1), (name2) in zip(self.model.named_parameters(), self.global_model):
+            primal_res += torch.sum(torch.square(param1 - self.global_model[name2]))
+        primal_res = torch.sqrt(primal_res).item()
+        return primal_res * self.cfg.fed.args.rho
 
     def update(self, cli_logger):
         
@@ -86,7 +115,7 @@ class FuncxClientOptim(BaseClient):
         ## initial evaluation
         if self.cfg.validation == True and self.test_dataloader != None:
             cli_logger.start_timer("val_before_update_val_set")
-            test_loss, test_accuracy = super(FuncxClientOptim, self).client_validation(
+            test_loss, test_accuracy =self.client_validation(
                 self.test_dataloader
             )
             cli_logger.add_info(
@@ -115,9 +144,9 @@ class FuncxClientOptim(BaseClient):
                 optimizer.zero_grad()
                 output = self.model(data)
                 loss = self.loss_fn(output, target)
+                loss += self.compute_residual()
                 loss.backward()
                 optimizer.step()
-                
                 train_loss += loss.item()
                 if output.shape[1] == 1:
                     pred = torch.round(output)

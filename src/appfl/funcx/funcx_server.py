@@ -1,5 +1,4 @@
 import abc
-from http import client
 from appfl.funcx.cloud_storage import LargeObjectWrapper
 from omegaconf import DictConfig
 from funcx import FuncXClient
@@ -189,7 +188,7 @@ class APPFLFuncXServer(abc.ABC):
         if step == 0:
             return
         self.trn_endps.cfg.fed.args.optim_args.lr *=  self.cfg.fed.args.server_lr_decay_exp_gamma
-        self.logger.info("Learing rate at step %d %.06f is set to " % (step + 1, self.trn_endps.cfg.fed.args.optim_args.lr))
+        self.logger.info("Learing rate at step %d is set to %.06f" % (step + 1, self.trn_endps.cfg.fed.args.optim_args.lr))
 
     def run(self, model: nn.Module, loss_fn: nn.Module, mode='train'):
         assert mode in ['train', 'clients_testing']
@@ -221,6 +220,7 @@ class APPFLFuncXServer(abc.ABC):
         self._finalize_experiment()
         # Shutdown all clients
         self.trn_endps.shutdown_all_clients()
+
     def cleanup(self):
         # Shutdown all clients
         self.trn_endps.shutdown_all_clients()

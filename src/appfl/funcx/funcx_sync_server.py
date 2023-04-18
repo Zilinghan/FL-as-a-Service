@@ -29,6 +29,7 @@ class APPFLFuncXSyncServer(APPFLFuncXServer):
             ## Perform LR decay
             self._lr_step(t)
             ## Boardcast global state and start training at funcX endpoints and aggregate local updates from clients
+            ## TODO: We can send things using s3
             local_states, client_logs = self._run_sync_task(
                 client_training,
                         self.weights, LargeObjectWrapper(global_state, "server_state"), self.loss_fn,

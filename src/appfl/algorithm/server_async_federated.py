@@ -15,36 +15,31 @@ class AsyncFedServer(FedServer):
         super(AsyncFedServer, self).__init__(weights, model, loss_fn, num_clients, device, **kwargs)
         self.global_step = global_step
 
-    def compute_pseudo_gradient(self):
+    def compute_pseudo_gradient(self, clinet_idx):
         for name, _ in self.model.named_parameters():
             self.pseudo_grad[name] = torch.zeros_like(self.model.state_dict()[name])
-            for i in range(self.num_clients):
-                self.pseudo_grad[name] += self.weights[i] * (
-                    self.global_state[name] - self.primal_states[i][name]
-                )
+            self.pseudo_grad[name] += self.weights[clinet_idx] * (self.global_state[name]-self.primal_states[clinet_idx][name])
 
-    def update(self, local_states: OrderedDict, init_step: int):
-        """Inputs for the global model update"""
+    def primal_residual_at_server(self, client_idx: int) -> float:
+        primal_res = 0
+        for name, _ in self.model.named_parameters():
+            primal_res += torch.sum(torch.square(self.global_state[name]-self.primal_states[client_idx][name].to(self.device)))
+        self.prim_res = torch.sqrt(primal_res).item()
+
+    def update(self, local_states: OrderedDict, init_step: int, client_idx: int):  
+        # Obtain the global and local states
         self.global_state = copy.deepcopy(self.model.state_dict())
         super(FedServer, self).primal_recover_from_local_states(local_states)
-
-        """ residual calculation """
-        super(FedServer, self).primal_residual_at_server()
-
-        """ change device """
-        for i in range(self.num_clients):
-            for name, _ in self.model.named_parameters():
-                self.primal_states[i][name] = self.primal_states[i][name].to(
-                    self.device
-                )
-
-        """ global_state calculation """
-        self.compute_step(init_step)
+        # Calculate residual
+        self.primal_residual_at_server(client_idx)
+        # Change device
+        for name, _ in self.model.named_parameters():
+            self.primal_states[client_idx][name] = self.primal_states[client_idx][name].to(self.device)
+        # Global state computation
+        self.compute_step(init_step, client_idx)
         for name, _ in self.model.named_parameters():
             self.global_state[name] += self.step[name]
-
-        """ model update """
+        # Model update
         self.model.load_state_dict(self.global_state)
-
-        """ global step update """
+        # Global step update
         self.global_step += 1

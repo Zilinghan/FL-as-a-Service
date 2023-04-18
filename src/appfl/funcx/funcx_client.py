@@ -1,3 +1,6 @@
+"""
+This file contains all the functions/tasks to be run on the funcx endpoint.
+"""
 def client_validate_data(
     cfg, 
     client_idx,
