@@ -94,8 +94,11 @@ class FuncxClientOptim(BaseClient):
         return loss, accuracy
 
     def compute_residual(self) -> float:
-        if self.cfg.fed.args.rho is None: return 0
-        if self.cfg.fed.args.rho == 0.0: return 0
+        try:
+            if self.cfg.fed.args.rho is None: return 0
+            if self.cfg.fed.args.rho == 0.0: return 0
+        except:
+            return 0
         primal_res = 0
         for (_, param1), (name2) in zip(self.model.named_parameters(), self.global_model):
             primal_res += torch.sum(torch.square(param1 - self.global_model[name2]))
