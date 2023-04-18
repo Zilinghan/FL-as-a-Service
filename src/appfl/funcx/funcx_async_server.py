@@ -88,7 +88,7 @@ class APPFLFuncXAsyncServer(APPFLFuncXServer):
             self.logger.info("Releasing the lock after critical section...")
             self.lock.release()
             # Training eval log
-            self._do_server_validation(global_step-1)
+            self._do_server_validation(global_step)
             self.server.logging_iteration(self.cfg, self.logger, global_step - 1)
             # Saving checkpoint
             self._save_checkpoint(global_step -1)
