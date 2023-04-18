@@ -49,19 +49,22 @@ class FuncXFLClient:
         """
         # Check the client status
         if self.status != ClientStatus.AVAILABLE: 
-            return None
-        # Submit the task, add callback function, and obtain the task id
-        fx.endpoint_id = self.client_cfg.endpoint_id
-        self.future = fx.submit(exct_func, *args, **kwargs)
-        if callback is not None:
-            self.future.add_done_callback(callback)
-        while self.future.task_id is None:
-            time.sleep(1) # TODO: How to make this a better way for task submission
-        # Update the client attributes
-        self._status = ClientStatus.RUNNING
-        self.task_name = exct_func.__name__
-        self.executing_task_id = self.future.task_id
-        return self.executing_task_id
+            return '0'
+        try:
+            # Submit the task, add callback function, and obtain the task id
+            fx.endpoint_id = self.client_cfg.endpoint_id
+            self.future = fx.submit(exct_func, *args, **kwargs)
+            if callback is not None:
+                self.future.add_done_callback(callback)
+            while self.future.task_id is None:
+                time.sleep(1) # TODO: How to make this a better way for task submission
+            # Update the client attributes
+            self._status = ClientStatus.RUNNING
+            self.task_name = exct_func.__name__
+            self.executing_task_id = self.future.task_id
+            return self.executing_task_id
+        except:
+            return '0'
 
 class APPFLFuncXTrainingClients:
     """
