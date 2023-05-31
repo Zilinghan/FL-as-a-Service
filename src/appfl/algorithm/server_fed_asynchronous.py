@@ -20,26 +20,25 @@ class ServerFedAsynchronous(FedServer):
     """
     def __init__(self, weights, model, loss_fn, num_clients, device, global_step = 0, staness_func = 'constant', **kwargs):
         weights = [1.0 / num_clients for _ in range(num_clients)] if weights is None else weights
+        super(ServerFedAsynchronous, self).__init__(weights, model, loss_fn, num_clients, device, **kwargs)
         self.global_step = global_step
-        # Create staleness function (Sec. 5.2) 
         self.staleness = self.__staleness_func_factory(
             stalness_func_name= staness_func['name'],
             **staness_func['args']
         )
-        super(ServerFedAsynchronous, self).__init__(weights, model, loss_fn, num_clients, device, **kwargs)
-
+        self.list_named_parameters = []
+        for name in self.model.named_parameters():
+            self.list_named_parameters.append(name)
+        
     def compute_pseudo_gradient(self, clinet_idx):
         for name, _ in self.model.named_parameters():
             self.pseudo_grad[name] = torch.zeros_like(self.model.state_dict()[name])
-            # TODO: Check the use of weights here
-            # self.pseudo_grad[name] += (self.global_state[name]-self.primal_states[clinet_idx][name])
             self.pseudo_grad[name] += self.weights[clinet_idx] * (self.global_state[name]-self.primal_states[clinet_idx][name])
 
     def compute_step(self, init_step: int, client_idx: int):
         self.compute_pseudo_gradient(client_idx)
+        alpha_t = self.alpha * self.staleness(self.global_step - init_step)
         for name, _ in self.model.named_parameters():
-            # Apply staleness factor
-            alpha_t = self.alpha * self.staleness(self.global_step - init_step)
             self.step[name] = - alpha_t * self.pseudo_grad[name]
 
     def primal_residual_at_server(self, client_idx: int) -> float:
@@ -59,8 +58,11 @@ class ServerFedAsynchronous(FedServer):
             self.primal_states[client_idx][name] = self.primal_states[client_idx][name].to(self.device)
         # Global state computation
         self.compute_step(init_step, client_idx)
-        for name, _ in self.model.named_parameters():
-            self.global_state[name] += self.step[name]
+        for name in self.model.state_dict():
+            if name in self.list_named_parameters:
+                self.global_state[name] += self.step[name]
+            else:
+                self.global_state[name] = self.primal_states[client_idx][name]
         # Model update
         self.model.load_state_dict(self.global_state)
         # Global step update

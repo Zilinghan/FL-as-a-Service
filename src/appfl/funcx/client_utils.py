@@ -20,20 +20,17 @@ def get_model(cfg):
 
 def load_global_state(cfg, global_state, temp_dir):
     if CloudStorage.is_cloud_storage_object(global_state):
-        CloudStorage.init(
-            cfg, temp_dir)
+        CloudStorage.init(cfg, temp_dir)
         global_state = CloudStorage.download_object(global_state)  
     return global_state
 
-def send_client_state(cfg, client_state, client_idx, temp_dir):
+def send_client_state(cfg, client_state, client_idx, temp_dir, local_model_key, local_model_url):
     if cfg.use_cloud_transfer == False:
         return client_state
         
-    client_state = LargeObjectWrapper(client_state, "client-%d" % client_idx)
+    client_state = LargeObjectWrapper(client_state, local_model_key)
     if not client_state.can_send_directly:
-        # Save client's weight to file:
-        CloudStorage.init(
-            cfg, temp_dir)
-        return CloudStorage.upload_object(client_state, ext='pt')
+        CloudStorage.init(cfg, temp_dir)
+        return CloudStorage.upload_object(client_state, object_url=local_model_url, ext='pt')
     else:
         return client_state.data

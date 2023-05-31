@@ -1,4 +1,5 @@
 import time
+import uuid
 import os.path as osp
 from enum import Enum
 from collections import OrderedDict
@@ -16,7 +17,7 @@ class ClientStatus(Enum):
 class FuncXFLClient:
     """
     FuncXFLClient:
-        Federated learning client with FuncX for communications.
+        Federated learning client with funcX for task submission.
     """
     def __init__(self, client_idx:int, client_cfg: OrderedDict):  
         self.client_idx = client_idx 
@@ -41,7 +42,7 @@ class FuncXFLClient:
         """
         Submit a task to the endpoint of the federated learning client.
         Args:
-            fx (FuncXExecutor): FunX executor for sumbitting tasks to federated learning client (funcx endpoint).
+            fx (FuncXExecutor): FunX executor for sumbitting tasks to FL client funcX endpoint.
             exct_func (function): Executale function to be run on the client endpoint.
             callback (function): Callback function called after the submitted task finishes.
             *args: arguments for the executable function.
@@ -57,7 +58,7 @@ class FuncXFLClient:
             if callback is not None:
                 self.future.add_done_callback(callback)
             while self.future.task_id is None:
-                time.sleep(1) # TODO: How to make this a better way for task submission
+                time.sleep(0.1) # TODO: How to make this a better way for task submission
             # Update the client attributes
             self._status = ClientStatus.RUNNING
             self.task_name = exct_func.__name__
@@ -76,20 +77,16 @@ class APPFLFuncXTrainingClients:
         self.cfg = cfg
         self.fxc = fxc
         self.logger = logger
-        self.fx = FuncXExecutor(funcx_client=fxc, batch_enabled = True)
         self.executing_tasks = {}
         self.clients = {
             client_idx: FuncXFLClient(client_idx, client_cfg)
             for client_idx, client_cfg in enumerate(self.cfg.clients)
         }
-        # Config S3 bucket (if necessary)
+        self.fx = FuncXExecutor(funcx_client=fxc, batch_enabled=True)
         self.use_s3bucket = cfg.server.s3_bucket is not None
-        if (self.use_s3bucket):
-            CloudStorage.init(
-                cfg, 
-                temp_dir= osp.join(cfg.server.output_dir, 'tmp'),
-                logger= self.logger
-            )
+        if self.use_s3bucket:
+            self.logger.info('Using S3 bucket for model transfer.')
+            CloudStorage.init(cfg, temp_dir= osp.join(cfg.server.output_dir, 'tmp'),logger= self.logger)
 
     def __register_task(self, task_id, client_id, task_name):
         """Register new client task to the list of executing tasks - call after task submission """
@@ -119,7 +116,7 @@ class APPFLFuncXTrainingClients:
         if not CloudStorage.is_cloud_storage_object(results) or not self.use_s3bucket:
             return results
         else:
-            return CloudStorage.download_object(results, to_device=self.cfg.server.device)
+            return CloudStorage.download_object(results, to_device=self.cfg.server.device, delete_cloud=True, delete_local=True)
     
     def __handle_params(self, args, kwargs):
         """Parse function's parameters and upload to S3 """
@@ -128,7 +125,7 @@ class APPFLFuncXTrainingClients:
         for i, obj in enumerate(_args):
             if type(obj) == LargeObjectWrapper:
                 if (not obj.can_send_directly) and self.use_s3bucket:
-                    _args[i] = CloudStorage.upload_object(obj)
+                    _args[i] = CloudStorage.upload_object(obj, register_for_clean=True)
                 else:
                     _args[i] = obj.data
         args = tuple(_args)
@@ -137,7 +134,7 @@ class APPFLFuncXTrainingClients:
             obj = kwargs[k]
             if type(obj) == LargeObjectWrapper:
                 if (not obj.can_send_directly) and self.use_s3bucket:
-                    kwargs[k] = CloudStorage.upload_object(obj)
+                    kwargs[k] = CloudStorage.upload_object(obj, register_for_clean=True)
                 else:
                     kwargs[k] = obj.data
         return args, kwargs
@@ -183,6 +180,11 @@ class APPFLFuncXTrainingClients:
         batch     = self.fxc.create_batch()
         # Execute training tasks at clients
         for client_idx, client_cfg in enumerate(self.cfg.clients):
+            if self.use_s3bucket and exct_func.__name__ == 'client_training':
+                local_model_key = str(uuid.uuid4()) + f"_client_state_{client_idx}"
+                local_model_url = CloudStorage.presign_upload_object(local_model_key)
+                kwargs['local_model_key'] = local_model_key
+                kwargs['local_model_url'] = local_model_url
             batch.add(
                 func_uuid,
                 client_cfg.endpoint_id,
@@ -280,6 +282,11 @@ class APPFLFuncXTrainingClients:
         client = self.clients[client_idx]
         self.logger.info("Async task '%s' is assigned to %s." %(self.async_func.__name__, client.client_cfg.name)) 
         self.async_func_args, self.async_func_kwargs = self.__handle_params(self.async_func_args, self.async_func_kwargs)
+        if self.use_s3bucket and self.async_func.__name__ == 'client_training':
+            local_model_key = str(uuid.uuid4()) + f"_client_state_{client_idx}"
+            local_model_url = CloudStorage.presign_upload_object(local_model_key)
+            self.async_func_kwargs['local_model_key'] = local_model_key
+            self.async_func_kwargs['local_model_url'] = local_model_url
         # Send task to client
         task_id = client.submit_task(
             self.fx,

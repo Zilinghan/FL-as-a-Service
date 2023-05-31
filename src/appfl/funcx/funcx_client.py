@@ -28,6 +28,8 @@ def client_training(
     weights,
     global_state,
     loss_fn,
+    local_model_key="",
+    local_model_url="",
     do_validation=False,
     ):
     from appfl.misc.logging import ClientLogger
@@ -99,7 +101,7 @@ def client_training(
 
     ## Send client state to server
     cli_logger.start_timer("upload_client_state")
-    res = send_client_state(cfg, client_state, client_idx, temp_dir)
+    res = send_client_state(cfg, client_state, client_idx, temp_dir, local_model_key, local_model_url)
     cli_logger.stop_timer("upload_client_state")
     
     cli_logger.mark_event("stop_endpoint_execution")

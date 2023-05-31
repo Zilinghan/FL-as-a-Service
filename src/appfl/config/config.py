@@ -144,4 +144,4 @@ class FuncXConfig(Config):
     server_validation_step: int = 1
 
     # Cloud storage
-    use_cloud_transfer: bool = False
+    use_cloud_transfer: bool = True

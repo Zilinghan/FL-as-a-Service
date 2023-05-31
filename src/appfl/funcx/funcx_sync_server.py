@@ -1,14 +1,12 @@
-from http import client
-from appfl.funcx.cloud_storage import LargeObjectWrapper
-from omegaconf import DictConfig
-from funcx import FuncXClient
-import numpy as np
-import torch.nn as nn
 import time
-from ..algorithm import *
+import uuid
 from ..misc import *
+from ..algorithm import *
+from funcx import FuncXClient
+from omegaconf import DictConfig
 from .funcx_server import APPFLFuncXServer
 from .funcx_client import client_training
+from appfl.funcx.cloud_storage import LargeObjectWrapper
 
 class APPFLFuncXSyncServer(APPFLFuncXServer):
     def __init__(self, cfg: DictConfig, fxc: FuncXClient):
@@ -18,6 +16,7 @@ class APPFLFuncXSyncServer(APPFLFuncXServer):
     def _do_training(self):
         """ Looping over all epochs """
         start_time = time.time()
+        server_model_basename = str(uuid.uuid4()) + "_server_state"
         for t in range(self.cfg.num_epochs):
             self.logger.info(" ====== Epoch [%d/%d] ====== " % (t+1, self.cfg.num_epochs))
             per_iter_start = time.time()
@@ -32,8 +31,9 @@ class APPFLFuncXSyncServer(APPFLFuncXServer):
             ## TODO: We can send things using s3
             local_states, client_logs = self._run_sync_task(
                 client_training,
-                        self.weights, LargeObjectWrapper(global_state, "server_state"), self.loss_fn,
-                        do_validation = self.cfg.client_do_validation)
+                self.weights, LargeObjectWrapper(global_state, f"{server_model_basename}_{t}"), self.loss_fn,
+                do_validation = self.cfg.client_do_validation
+            )
 
             local_states = [local_states]
             self._do_client_validation(t, client_logs)

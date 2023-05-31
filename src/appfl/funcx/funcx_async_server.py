@@ -1,14 +1,15 @@
 import copy
 import time
+import uuid
 import threading
 import torch.nn as nn
 from ..misc import *
 from ..algorithm import *
 from funcx import FuncXClient
 from omegaconf import DictConfig
+from .funcx_client import client_training
 from .funcx_server import APPFLFuncXServer
 from appfl.funcx.cloud_storage import LargeObjectWrapper
-from .funcx_client import client_training, client_testing, client_validate_data
 
 class APPFLFuncXAsyncServer(APPFLFuncXServer):
     def __init__(self, cfg: DictConfig, fxc: FuncXClient):
@@ -18,6 +19,7 @@ class APPFLFuncXAsyncServer(APPFLFuncXServer):
         self.client_init_step ={i : 0 for i in range(self.cfg.num_clients)}
         # Create a lock object for the critical section (global model update)
         self.lock = threading.Lock()
+        self.server_model_basename = str(uuid.uuid4()) + "_server_state"
 
     def _initialize_server_model(self):
         """ Initialize the federated learning (APPFL) server. """
@@ -81,7 +83,9 @@ class APPFLFuncXAsyncServer(APPFLFuncXServer):
             # Register new asynchronous task for clients
             self.trn_endps.register_async_func(
                 client_training, 
-                self.weights, self.server.model.state_dict(), self.loss_fn,
+                self.weights, 
+                LargeObjectWrapper(self.server.model.state_dict(), f"{self.server_model_basename}_{self.server.global_step}"),
+                self.loss_fn,
                 do_validation = self.cfg.client_do_validation
             )
             # Release the global-update lock
@@ -101,7 +105,9 @@ class APPFLFuncXAsyncServer(APPFLFuncXServer):
         # Register async function: client training
         self.trn_endps.register_async_func(
             client_training, 
-            self.weights, self.server.model.state_dict(), self.loss_fn,
+            self.weights, 
+            LargeObjectWrapper(self.server.model.state_dict(), f"{self.server_model_basename}_{self.server.global_step}"),
+            self.loss_fn,
             do_validation = self.cfg.client_do_validation)
         # Register the stopping criteria
         self.trn_endps.register_stopping_criteria(stopping_criteria)
