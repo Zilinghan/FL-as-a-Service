@@ -1,44 +1,27 @@
-import time
-import os.path as osp
-
-import numpy as np
 import torch
-import torchvision
-from torchvision.transforms import ToTensor
+import argparse
+from models.cnn import *
 from appfl.config import *
+from funcx import FuncXClient
 from appfl.misc.data import *
 from appfl.misc.utils import *
 from appfl.misc.logging import *
-from models.cnn  import *
 import appfl.run_funcx_server as funcx_server
-import argparse
-
-from funcx import FuncXClient
-
-"""
-python grpc_mnist_client.py --host=localhost --client_id=0 --nclients=1
-"""
-
-""" read arguments """ 
 
 parser = argparse.ArgumentParser()  
-parser.add_argument("--client_config", type=str, default="configs/clients/mnist_broad.yaml")
+parser.add_argument("--client_config", type=str, default="configs/clients/client.yaml")
 parser.add_argument("--config", type=str, default= "configs/fed_avg/funcx_fedavg_mnist.yaml") 
-
-## other agruments
 parser.add_argument('--clients-test', action='store_true', default=False)
 parser.add_argument('--reproduce', action='store_true', default=True) 
 parser.add_argument('--load-model', action='store_true', default=False) 
 parser.add_argument("--load-model-dirname", type=str, default= "")
 parser.add_argument("--load-model-filename", type=str, default= "")
 parser.add_argument('--use-tensorboard', action='store_true', default=True)
- 
 args = parser.parse_args()
 
 def main():
     """ Configuration """     
     cfg = OmegaConf.structured(FuncXConfig)
- 
     cfg.reproduce = True
     cfg.save_model_state_dict = True
     cfg.save_model = True
@@ -46,7 +29,6 @@ def main():
     cfg.load_model = args.load_model
     cfg.load_model_dirname  = args.load_model_dirname
     cfg.load_model_filename = args.load_model_filename
-
     if cfg.reproduce == True:
         set_seed(1)
 
@@ -81,15 +63,12 @@ def main():
         model.eval()
 
     """ User-defined data """
-    ## save a copy of config to logfile
     logger = mLogging.get_logger()
-    # logger.info(
-    #     OmegaConf.to_yaml(cfg)
-    # )
-    
+
     """ Prepare test dataset"""
     server_test_dataset = None
     server_val_dataset  = None
+
     """ APPFL with funcX """
     ## create funcX client object
     fxc = FuncXClient(force_login=True)

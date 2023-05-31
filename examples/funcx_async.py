@@ -1,31 +1,21 @@
-import time
-import os.path as osp
-
-import numpy as np
 import torch
+import argparse
 import torchvision
-from torchvision.transforms import ToTensor
+import os.path as osp
+from models.cnn import *
 from appfl.config import *
+from funcx import FuncXClient
 from appfl.misc.data import *
 from appfl.misc.utils import *
 from appfl.misc.logging import *
-from models.cnn  import *
+from torchvision.transforms import ToTensor
 import appfl.run_funcx_async_server as funcx_async_server
-import argparse
-from losses.fedasync_loss import *
-
-from funcx import FuncXClient
-
-""" read arguments """ 
 
 parser = argparse.ArgumentParser()  
-## appfl-funcx
-parser.add_argument("--device_config", type=str,  default='./configs/clients/mnist_async.yaml')
-parser.add_argument("--config", type=str, default='./configs/fed_async/funcx_fed_async_mnist.yaml') 
-## other agruments
+parser.add_argument("--device_config", type=str,  default='./configs/clients/client.yaml')
+parser.add_argument("--config", type=str, default='./configs/fed_async/funcx_fedasync_mnist.yaml') 
 parser.add_argument('--reproduce', action='store_true', default=True) 
 parser.add_argument('--use_tensorboard', action='store_true', default=True)
-
 args = parser.parse_args()
 
 def main():
@@ -50,9 +40,6 @@ def main():
     """ User-defined model """
     ModelClass     = get_executable_func(cfg.get_model)()
     model          = ModelClass(*cfg.model_args, **cfg.model_kwargs) 
-    # LossClass      = get_executable_func(cfg.get_loss)()
-    # loss_fn        = LossClass(weight_decay=cfg.fed.args.rho)
-    # loss_fn        = LossClass(weight_decay=None)
     loss_fn        = torch.nn.CrossEntropyLoss()  
 
     """ User-defined data """
