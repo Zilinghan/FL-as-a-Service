@@ -1,9 +1,10 @@
+output*
+examples/data
 .gitignore
 .DS_Store
 outputs/
 output/
 notes/
-funcx/
 example-sep/*/output
 src/appfl/.DS_Store
 src/appfl/algorithm/mryu.py
